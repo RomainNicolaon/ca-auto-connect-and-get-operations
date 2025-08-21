@@ -1,21 +1,34 @@
 import puppeteer from 'puppeteer';
 import dotenv from 'dotenv';
+import pino from 'pino';
+import pinoPretty from 'pino-pretty';
+
 dotenv.config();
+
+const logger = pino(pinoPretty({
+  transport: {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      ignore: 'pid,hostname',
+      translateTime: 'SYS:dd-mm-yyyy HH:MM:ss',
+    },
+  },
+}));
+
+logger.info('Starting script...');
 
 (async () => {
   // Launch the browser and open a new blank page
   const browser = await puppeteer.launch({
     headless: false,    // Show the browser window
-    slowMo: 300,        // Add 500ms delay between actions
+    slowMo: 200,        // Add 200ms delay between actions
     devtools: false      // Open DevTools automatically
   });
 
   // Open a the actual page
   const page = await browser.newPage();
   
-  // Listen to console logs from the page
-  page.on('console', msg => console.log('PAGE LOG:', msg.text()));
-
   // Navigate the page to a URL
   await page.goto('https://www.credit-agricole.fr/ca-centreloire/particulier/acceder-a-mes-comptes.html');
 
@@ -23,20 +36,20 @@ dotenv.config();
   await page.setViewport({width: 1920, height: await page.evaluate(() => document.body.scrollHeight)});
 
   // Type into id box
-  console.log('Typing account number...');
+  logger.info('Typing account number...');
   await page.type('#Login-account', process.env.ACCOUNT_NUMBER);
 
   // Click on .Login-button
-  console.log('Clicking login button...');
+  logger.info('Clicking login button...');
   await page.click('.Login-button');
 
-  console.log('Starting password entry...');
+  logger.info('Starting password entry...');
   
   // click on each character of the password in .Login-keypad
   // Since digits order is random, we need to find each digit dynamically
   for (let i = 0; i < process.env.PASSWORD.length; i++) {
     const digit = process.env.PASSWORD[i];
-    console.log(`Clicking digit: ${digit} (${i + 1}/${process.env.PASSWORD.length})`);
+    logger.info(`Clicking digit: ${digit} (${i + 1}/${process.env.PASSWORD.length})`);
     
     // Find and click the button that contains this digit
     await page.evaluate((targetDigit) => {
@@ -52,33 +65,41 @@ dotenv.config();
   }
 
   // Submit the form
-  console.log('Submitting form...');
+  logger.info('Submitting form...');
   await page.click('#validation');
 
-  await new Promise(resolve => setTimeout(resolve, 3000)); // Wait to see the result
+  await new Promise(resolve => setTimeout(resolve, 2500)); // Wait to see the result
 
+  logger.info('Accepting privacy policy...');
   // Accept privacy policy
   await page.click('#popin_tc_privacy_button_2');
 
+  logger.info('Clicking on Documents...');
   // Click on Documents on menu
   await page.goto('https://www.credit-agricole.fr/ca-centreloire/particulier/operations/operations-courantes/telechargement.html');
 
+  logger.info('Clicking on the first DownloadAccount-main...');
   // Click on the first DownloadAccount-main
   await page.evaluate(() => {
     const buttons = document.querySelectorAll('.DownloadAccount-main');
     buttons[1].click();
   });
 
+  logger.info('Choosing csv on the select input1...');
   // Choose csv on the select input1
   await page.select('select#input1', 'string:csv');
 
+  logger.info('Selecting optradio2...');
   // Select optradio2
   await page.click('#optradio2');
 
+  logger.info('Clicking on Download button...');
   // Click on Download button
   await page.click('#validation-button');
 
-  await new Promise(resolve => setTimeout(resolve, 3000)); // Wait to see the result
+  logger.info('Waiting for download...');
+  await new Promise(resolve => setTimeout(resolve, 1000)); // Wait to see the result
 
-  // await browser.close();
+  logger.info('Download ended, closing browser...');
+  await browser.close();
 })();
