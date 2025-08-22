@@ -122,6 +122,10 @@
         border-left-color: #9b59b6;
       }
 
+      .card.account-balance {
+        border-left-color: #f39c12;
+      }
+
       .card h3 {
         font-size: 0.9rem;
         color: #7f8c8d;
@@ -352,6 +356,10 @@
             <h3>Solde Net</h3>
             <div class="value" id="net-balance">-</div>
           </div>
+          <div class="card account-balance">
+            <h3>Solde du Compte</h3>
+            <div class="value" id="account-balance">-</div>
+          </div>
           <div class="card operations">
             <h3>Opérations</h3>
             <div class="value" id="total-operations">-</div>
@@ -467,6 +475,16 @@
         document.getElementById("net-balance").textContent = `${
           summary.netAmount >= 0 ? "+" : ""
         }${summary.netAmount.toFixed(2)}€`;
+        
+        // Update account balance if available
+        const accountBalanceElement = document.getElementById("account-balance");
+        if (summary.accountBalance !== null && summary.accountBalance !== undefined) {
+          accountBalanceElement.textContent = `${summary.accountBalance.toFixed(2)}€`;
+          accountBalanceElement.parentElement.style.display = "block";
+        } else {
+          accountBalanceElement.parentElement.style.display = "none";
+        }
+        
         document.getElementById("total-operations").textContent =
           summary.totalOperations;
       }

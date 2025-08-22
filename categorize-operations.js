@@ -116,54 +116,6 @@ const CATEGORIES = {
 };
 
 /**
- * Parse a single CSV line with quote handling
- * @param {string} line - CSV line to parse
- * @returns {Array} Array of column values
- */
-function parseCSVLine(line) {
-  const columns = [];
-  let currentColumn = "";
-  let insideQuotes = false;
-  let i = 0;
-
-  while (i < line.length) {
-    const char = line[i];
-
-    if (char === '"') {
-      if (insideQuotes && line[i + 1] === '"') {
-        // Escaped quote
-        currentColumn += '"';
-        i += 2;
-      } else {
-        // Toggle quote state
-        insideQuotes = !insideQuotes;
-        i++;
-      }
-    } else if ((char === "," || char === ";") && !insideQuotes) {
-      // Field separator outside quotes
-      columns.push(currentColumn.trim());
-      currentColumn = "";
-      i++;
-    } else if (char === '"' && !insideQuotes) {
-      // Quote as field separator (your case)
-      columns.push(currentColumn.trim());
-      currentColumn = "";
-      i++;
-    } else {
-      currentColumn += char;
-      i++;
-    }
-  }
-
-  // Add the last column
-  if (currentColumn || columns.length > 0) {
-    columns.push(currentColumn.trim());
-  }
-
-  return columns.filter((col) => col !== ""); // Remove empty columns
-}
-
-/**
  * Parse CSV content and extract operations
  * @param {string} csvContent - Raw CSV content
  * @returns {Array} Array of operation objects
@@ -171,6 +123,21 @@ function parseCSVLine(line) {
 function parseCSV(csvContent) {
   const lines = csvContent.split("\n");
   const operations = [];
+
+  // Extract account balance from line 7 (A7)
+  let accountBalance = null;
+  if (lines.length > 6) {
+    const balanceLine = lines[6]; // Line 7 (0-indexed)
+    // Handle encoding issues with special characters
+    const balanceMatch = balanceLine.match(/Solde au \d{2}\/\d{2}\/\d{4}\s+([\d\s�]+),(\d{2})\s*[€�]/);
+    if (balanceMatch) {
+      const balanceStr = balanceMatch[1].replace(/[\s�]/g, '') + '.' + balanceMatch[2];
+      accountBalance = parseFloat(balanceStr);
+      logger.info(`Account balance extracted: ${accountBalance}€`);
+    } else {
+      logger.warn(`Could not extract account balance from line 7: "${balanceLine}"`);
+    }
+  }
 
   // Find the header row (contains "Date;Libellé;Débit euros;Crédit euros;")
   let headerIndex = -1;
@@ -254,7 +221,10 @@ function parseCSV(csvContent) {
     }
   }
 
-  return operations;
+  return {
+    operations: operations,
+    accountBalance: accountBalance
+  };
 }
 
 /**
@@ -335,9 +305,10 @@ function categorizeOperation(libelle) {
 /**
  * Process operations and group by category
  * @param {Array} operations - Array of operation objects
+ * @param {number} accountBalance - Current account balance
  * @returns {Object} Categorized operations
  */
-function categorizeOperations(operations) {
+function categorizeOperations(operations, accountBalance = null) {
   const categorized = {};
   let totalDebit = 0;
   let totalCredit = 0;
@@ -371,6 +342,7 @@ function categorizeOperations(operations) {
       totalDebit,
       totalCredit,
       netAmount: totalCredit - totalDebit,
+      accountBalance: accountBalance,
     },
   };
 }
@@ -391,7 +363,11 @@ function generateReport(categorizedData) {
   report += `   • Total crédits: +${summary.totalCredit.toFixed(2)}€\n`;
   report += `   • Solde net: ${
     summary.netAmount >= 0 ? "+" : ""
-  }${summary.netAmount.toFixed(2)}€\n\n`;
+  }${summary.netAmount.toFixed(2)}€\n`;
+  if (summary.accountBalance !== null) {
+    report += `   • Solde du compte: ${summary.accountBalance.toFixed(2)}€\n`;
+  }
+  report += `\n`;
 
   // Categories breakdown
   report += `📋 RÉPARTITION PAR CATÉGORIE:\n\n`;
@@ -464,8 +440,14 @@ async function processCsvFile(csvFilePath) {
     logger.info("Fichier CSV lu avec succès");
 
     // Parse operations
-    const operations = parseCSV(csvContent);
+    const parseResult = parseCSV(csvContent);
+    const operations = parseResult.operations;
+    const accountBalance = parseResult.accountBalance;
+    
     logger.info(`${operations.length} opérations extraites`);
+    if (accountBalance !== null) {
+      logger.info(`Solde du compte: ${accountBalance}€`);
+    }
 
     if (operations.length === 0) {
       logger.warn("Aucune opération trouvée dans le fichier");
@@ -473,7 +455,7 @@ async function processCsvFile(csvFilePath) {
     }
 
     // Categorize operations
-    const categorizedData = categorizeOperations(operations);
+    const categorizedData = categorizeOperations(operations, accountBalance);
     logger.info(
       `Opérations catégorisées en ${
         Object.keys(categorizedData.categories).length
