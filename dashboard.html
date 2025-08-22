@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard Financier - Credit Agricole</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/date-fns@2.29.3/index.min.js"></script>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+      }
+
+      .upload-section {
+        padding: 30px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+      }
+
+      .file-input-wrapper {
+        position: relative;
+        display: inline-block;
+        margin: 20px 0;
+      }
+
+      .file-input {
+        position: absolute;
+        opacity: 0;
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+      }
+
+      .file-input-button {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 30px;
+        border-radius: 50px;
+        border: none;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: transform 0.2s;
+      }
+
+      .file-input-button:hover {
+        transform: translateY(-2px);
+      }
+
+      .dashboard {
+        padding: 30px;
+        display: none;
+      }
+
+      .summary-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 40px;
+      }
+
+      .card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        border-left: 5px solid;
+        transition: transform 0.2s;
+      }
+
+      .card:hover {
+        transform: translateY(-5px);
+      }
+
+      .card.debit {
+        border-left-color: #e74c3c;
+      }
+
+      .card.credit {
+        border-left-color: #27ae60;
+      }
+
+      .card.balance {
+        border-left-color: #3498db;
+      }
+
+      .card.operations {
+        border-left-color: #9b59b6;
+      }
+
+      .card h3 {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        margin-bottom: 10px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .card .value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2c3e50;
+      }
+
+      .charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 40px;
+      }
+
+      .chart-container {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .chart-title {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 20px;
+        text-align: center;
+      }
+
+      .chart-wrapper {
+        position: relative;
+        height: 400px;
+      }
+
+      .timeline-chart {
+        grid-column: 1 / -1;
+      }
+
+      .timeline-chart .chart-wrapper {
+        height: 300px;
+      }
+
+      .category-details {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .category-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 0;
+        border-bottom: 1px solid #ecf0f1;
+      }
+
+      .category-item:last-child {
+        border-bottom: none;
+      }
+
+      .category-info {
+        display: flex;
+        align-items: center;
+      }
+
+      .category-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 1.2rem;
+      }
+
+      .category-stats {
+        text-align: right;
+      }
+
+      .category-amount {
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+
+      .category-count {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #7f8c8d;
+      }
+
+      .error {
+        background: #e74c3c;
+        color: white;
+        padding: 15px;
+        border-radius: 10px;
+        margin: 20px 0;
+        text-align: center;
+      }
+
+      @media (max-width: 768px) {
+        .charts-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .header h1 {
+          font-size: 2rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>💰 Dashboard Financier</h1>
+        <p>Analyse visuelle de vos opérations bancaires Credit Agricole</p>
+      </div>
+
+      <div class="upload-section">
+        <h2>📊 Chargez votre fichier JSON</h2>
+        <p>Sélectionnez le fichier JSON généré par l'outil de catégorisation</p>
+        <div class="file-input-wrapper">
+          <input type="file" id="jsonFile" class="file-input" accept=".json" />
+          <button class="file-input-button">📁 Choisir le fichier JSON</button>
+        </div>
+        <div id="error-message"></div>
+      </div>
+
+      <div id="dashboard" class="dashboard">
+        <div class="summary-cards">
+          <div class="card debit">
+            <h3>Total Débits</h3>
+            <div class="value" id="total-debit">-</div>
+          </div>
+          <div class="card credit">
+            <h3>Total Crédits</h3>
+            <div class="value" id="total-credit">-</div>
+          </div>
+          <div class="card balance">
+            <h3>Solde Net</h3>
+            <div class="value" id="net-balance">-</div>
+          </div>
+          <div class="card operations">
+            <h3>Opérations</h3>
+            <div class="value" id="total-operations">-</div>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-container">
+            <div class="chart-title">📊 Répartition par Catégorie</div>
+            <div class="chart-wrapper">
+              <canvas id="categoryChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-container">
+            <div class="chart-title">💸 Dépenses vs Revenus</div>
+            <div class="chart-wrapper">
+              <canvas id="balanceChart"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-container timeline-chart">
+            <div class="chart-title">📈 Évolution Temporelle</div>
+            <div class="chart-wrapper">
+              <canvas id="timelineChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="category-details">
+          <div class="chart-title">📋 Détail des Catégories</div>
+          <div id="category-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let financialData = null;
+      let charts = {};
+
+      // Category colors and icons
+      const categoryConfig = {
+        Alimentation: { color: "#e74c3c", icon: "🍽️" },
+        Transport: { color: "#3498db", icon: "🚗" },
+        Santé: { color: "#2ecc71", icon: "🏥" },
+        Logement: { color: "#9b59b6", icon: "🏠" },
+        Loisirs: { color: "#f39c12", icon: "🎬" },
+        Banque: { color: "#34495e", icon: "🏦" },
+        Salaire: { color: "#27ae60", icon: "💰" },
+        Impôts: { color: "#e67e22", icon: "📋" },
+        Shopping: { color: "#8e44ad", icon: "🛒" },
+        Autres: { color: "#95a5a6", icon: "📦" },
+      };
+
+      // File input handler
+      document
+        .getElementById("jsonFile")
+        .addEventListener("change", function (event) {
+          const file = event.target.files[0];
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+              try {
+                financialData = JSON.parse(e.target.result);
+                displayDashboard();
+              } catch (error) {
+                showError(
+                  "Erreur lors de la lecture du fichier JSON: " + error.message
+                );
+              }
+            };
+            reader.readAsText(file);
+          }
+        });
+
+      function showError(message) {
+        const errorDiv = document.getElementById("error-message");
+        errorDiv.innerHTML = `<div class="error">${message}</div>`;
+      }
+
+      function displayDashboard() {
+        if (
+          !financialData ||
+          !financialData.categories ||
+          !financialData.summary
+        ) {
+          showError("Format de fichier JSON invalide");
+          return;
+        }
+
+        // Show dashboard
+        document.getElementById("dashboard").style.display = "block";
+
+        // Update summary cards
+        updateSummaryCards();
+
+        // Create charts
+        createCategoryChart();
+        createBalanceChart();
+        createTimelineChart();
+        createCategoryDetails();
+      }
+
+      function updateSummaryCards() {
+        const summary = financialData.summary;
+
+        document.getElementById(
+          "total-debit"
+        ).textContent = `-${summary.totalDebit.toFixed(2)}€`;
+        document.getElementById(
+          "total-credit"
+        ).textContent = `+${summary.totalCredit.toFixed(2)}€`;
+        document.getElementById("net-balance").textContent = `${
+          summary.netAmount >= 0 ? "+" : ""
+        }${summary.netAmount.toFixed(2)}€`;
+        document.getElementById("total-operations").textContent =
+          summary.totalOperations;
+      }
+
+      function createCategoryChart() {
+        const ctx = document.getElementById("categoryChart").getContext("2d");
+
+        const categories = Object.keys(financialData.categories);
+        const amounts = categories.map((cat) =>
+          Math.abs(financialData.categories[cat].totalAmount)
+        );
+        const colors = categories.map(
+          (cat) => categoryConfig[cat]?.color || "#95a5a6"
+        );
+
+        if (charts.categoryChart) {
+          charts.categoryChart.destroy();
+        }
+
+        charts.categoryChart = new Chart(ctx, {
+          type: "doughnut",
+          data: {
+            labels: categories,
+            datasets: [
+              {
+                data: amounts,
+                backgroundColor: colors,
+                borderWidth: 2,
+                borderColor: "#fff",
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  padding: 20,
+                  usePointStyle: true,
+                },
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    const value = context.parsed;
+                    const total = context.dataset.data.reduce(
+                      (a, b) => a + b,
+                      0
+                    );
+                    const percentage = ((value / total) * 100).toFixed(1);
+                    return `${context.label}: ${value.toFixed(
+                      2
+                    )}€ (${percentage}%)`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function createBalanceChart() {
+        const ctx = document.getElementById("balanceChart").getContext("2d");
+
+        const summary = financialData.summary;
+
+        if (charts.balanceChart) {
+          charts.balanceChart.destroy();
+        }
+
+        charts.balanceChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Débits", "Crédits"],
+            datasets: [
+              {
+                label: "Montant (€)",
+                data: [summary.totalDebit, summary.totalCredit],
+                backgroundColor: ["#e74c3c", "#27ae60"],
+                borderColor: ["#c0392b", "#229954"],
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  callback: function (value) {
+                    return value.toFixed(0) + "€";
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function createTimelineChart() {
+        const ctx = document.getElementById("timelineChart").getContext("2d");
+
+        // Collect all operations with dates
+        const allOperations = [];
+        Object.values(financialData.categories).forEach((category) => {
+          category.operations.forEach((op) => {
+            allOperations.push({
+              date: op.date,
+              amount: op.amount,
+            });
+          });
+        });
+
+        // Sort by date and create cumulative balance
+        allOperations.sort(
+          (a, b) =>
+            new Date(a.date.split("/").reverse().join("-")) -
+            new Date(b.date.split("/").reverse().join("-"))
+        );
+
+        let cumulativeBalance = 0;
+        const timelineData = allOperations.map((op) => {
+          cumulativeBalance += op.amount;
+          return {
+            x: op.date,
+            y: cumulativeBalance,
+          };
+        });
+
+        if (charts.timelineChart) {
+          charts.timelineChart.destroy();
+        }
+
+        charts.timelineChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            datasets: [
+              {
+                label: "Solde Cumulé",
+                data: timelineData,
+                borderColor: "#3498db",
+                backgroundColor: "rgba(52, 152, 219, 0.1)",
+                fill: true,
+                tension: 0.4,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+            },
+            scales: {
+              x: {
+                type: "category",
+                title: {
+                  display: true,
+                  text: "Date",
+                },
+              },
+              y: {
+                title: {
+                  display: true,
+                  text: "Solde (€)",
+                },
+                ticks: {
+                  callback: function (value) {
+                    return value.toFixed(0) + "€";
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      function createCategoryDetails() {
+        const categoryList = document.getElementById("category-list");
+        categoryList.innerHTML = "";
+
+        // Sort categories by total amount (most negative first)
+        const sortedCategories = Object.entries(financialData.categories).sort(
+          ([, a], [, b]) => a.totalAmount - b.totalAmount
+        );
+
+        sortedCategories.forEach(([categoryName, categoryData]) => {
+          const config = categoryConfig[categoryName] || {
+            color: "#95a5a6",
+            icon: "📦",
+          };
+
+          const categoryItem = document.createElement("div");
+          categoryItem.className = "category-item";
+
+          categoryItem.innerHTML = `
+                    <div class="category-info">
+                        <div class="category-icon" style="background-color: ${
+                          config.color
+                        }20; color: ${config.color}">
+                            ${config.icon}
+                        </div>
+                        <div>
+                            <div style="font-weight: bold; color: #2c3e50;">${categoryName}</div>
+                            <div style="font-size: 0.9rem; color: #7f8c8d;">${
+                              categoryData.count
+                            } opération(s)</div>
+                        </div>
+                    </div>
+                    <div class="category-stats">
+                        <div class="category-amount" style="color: ${
+                          categoryData.totalAmount < 0 ? "#e74c3c" : "#27ae60"
+                        }">
+                            ${
+                              categoryData.totalAmount >= 0 ? "+" : ""
+                            }${categoryData.totalAmount.toFixed(2)}€
+                        </div>
+                        <div class="category-count">
+                            Moy: ${(
+                              categoryData.totalAmount / categoryData.count
+                            ).toFixed(2)}€
+                        </div>
+                    </div>
+                `;
+
+          categoryList.appendChild(categoryItem);
+        });
+      }
+    </script>
+  </body>
+</html>
