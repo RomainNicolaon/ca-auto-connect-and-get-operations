@@ -99,6 +99,8 @@ const CATEGORIES = {
     "CHEQUE",
     "RETRAIT",
     "DEPOT",
+    "VIREMENT EMIS",
+    "VIREMENT RECU",
     "VIR",
   ],
   Salaire: ["SALAIRE", "PAIE", "REMUNERATION", "PRIME", "INDEMNITE"],
@@ -310,75 +312,6 @@ function categorizeOperation(libelle) {
 }
 
 /**
- * Fix encoding issues in CSV content
- * @param {string} content - CSV content with potential encoding issues
- * @returns {string} Fixed content
- */
-function fixEncodingIssues(content) {
-  return (
-    content
-      // Common French accented characters
-      .replace(/\u00E0/g, "à") // à
-      .replace(/\u00E1/g, "á") // á
-      .replace(/\u00E2/g, "â") // â
-      .replace(/\u00E4/g, "ä") // ä
-      .replace(/\u00E9/g, "é") // é
-      .replace(/\u00E8/g, "è") // è
-      .replace(/\u00EA/g, "ê") // ê
-      .replace(/\u00EB/g, "ë") // ë
-      .replace(/\u00EE/g, "î") // î
-      .replace(/\u00EF/g, "ï") // ï
-      .replace(/\u00F4/g, "ô") // ô
-      .replace(/\u00F6/g, "ö") // ö
-      .replace(/\u00F9/g, "ù") // ù
-      .replace(/\u00FA/g, "ú") // ú
-      .replace(/\u00FB/g, "û") // û
-      .replace(/\u00FC/g, "ü") // ü
-      .replace(/\u00E7/g, "ç") // ç
-      .replace(/\u00F1/g, "ñ") // ñ
-      // Uppercase variants
-      .replace(/\u00C0/g, "À") // À
-      .replace(/\u00C1/g, "Á") // Á
-      .replace(/\u00C2/g, "Â") // Â
-      .replace(/\u00C4/g, "Ä") // Ä
-      .replace(/\u00C9/g, "É") // É
-      .replace(/\u00C8/g, "È") // È
-      .replace(/\u00CA/g, "Ê") // Ê
-      .replace(/\u00CB/g, "Ë") // Ë
-      .replace(/\u00CE/g, "Î") // Î
-      .replace(/\u00CF/g, "Ï") // Ï
-      .replace(/\u00D4/g, "Ô") // Ô
-      .replace(/\u00D6/g, "Ö") // Ö
-      .replace(/\u00D9/g, "Ù") // Ù
-      .replace(/\u00DA/g, "Ú") // Ú
-      .replace(/\u00DB/g, "Û") // Û
-      .replace(/\u00DC/g, "Ü") // Ü
-      .replace(/\u00C7/g, "Ç") // Ç
-      .replace(/\u00D1/g, "Ñ") // Ñ
-      // Special characters
-      .replace(/\u20AC/g, "€") // €
-      .replace(/\u00AB/g, "«") // «
-      .replace(/\u00BB/g, "»") // »
-      .replace(/\u2019/g, "'") // '
-      .replace(/\u2018/g, "'") // '
-      .replace(/\u201C/g, '"') // "
-      .replace(/\u201D/g, '"') // "
-      .replace(/\u2013/g, "-") // –
-      .replace(/\u2014/g, "-") // —
-      .replace(/\u2026/g, "...") // …
-      // Fix specific broken character patterns commonly seen in Credit Agricole CSVs
-      .replace(/\u00E0/g, "à")
-      .replace(/Compte \u00E0 composer/g, "Compte à composer")
-      .replace(/Compte � composer/g, "Compte à composer")
-      .replace(/op�ration/g, "opération")
-      .replace(/cr�dit/g, "crédit")
-      .replace(/d�bit/g, "débit")
-      .replace(/pr�l�vement/g, "prélèvement")
-      .replace(/�/g, "é")
-  ); // Fallback for remaining broken characters
-}
-
-/**
  * Process operations and group by category
  * @param {Array} operations - Array of operation objects
  * @param {number} accountBalance - Current account balance
@@ -511,29 +444,8 @@ async function processCsvFile(csvFilePath) {
       throw new Error(`Fichier non trouvé: ${csvFilePath}`);
     }
 
-    // Read CSV file with proper encoding handling
-    let csvContent;
-    try {
-      // First try to read as UTF-8
-      csvContent = fs.readFileSync(csvFilePath, "utf8");
-
-      // Check if there are encoding issues (broken characters)
-      if (csvContent.includes("�") || csvContent.includes("\uFFFD")) {
-        logger.warn(
-          "Détection de caractères corrompus, tentative avec l'encodage Windows-1252"
-        );
-        // Try reading with latin1 encoding which can handle Windows-1252
-        const buffer = fs.readFileSync(csvFilePath);
-        csvContent = buffer.toString("latin1");
-
-        // Convert common Windows-1252 characters to UTF-8 equivalents
-        csvContent = fixEncodingIssues(csvContent);
-      }
-    } catch (encodingError) {
-      logger.error("Erreur lors de la lecture du fichier:", encodingError);
-      throw encodingError;
-    }
-
+    // Read CSV file
+    const csvContent = fs.readFileSync(csvFilePath, "utf8");
     logger.info("Fichier CSV lu avec succès");
 
     // Parse operations

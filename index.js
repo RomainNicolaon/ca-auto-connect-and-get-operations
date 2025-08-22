@@ -104,11 +104,6 @@ logger.info("Starting script...");
   // Select optradio2
   await page.click("#optradio2");
 
-  // set the actual date
-  const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
   // choose the date range
   logger.info("Selecting start date (first day of month)...");
   await page.click("#dateFrom");
