@@ -5,14 +5,10 @@ FROM node:${NODE_VERSION}-alpine
 # Use production node environment by default.
 ENV NODE_ENV production
 
-
 WORKDIR /usr/src/app
 
 # Copy package files
 COPY package*.json ./
-
-# Copy .env.example to .env
-COPY .env.example .env
 
 # Download dependencies as a separate step to take advantage of Docker's caching.
 RUN npm ci --omit=dev
