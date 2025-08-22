@@ -113,6 +113,7 @@ const CATEGORIES = {
     "LEROY MERLIN",
     "CASTORAMA",
   ],
+  Jeux: ["STEAM", "GOG", "EPIC", "DISCORD", "DISCORD GAMES", "PAYPAL"],
 };
 
 /**

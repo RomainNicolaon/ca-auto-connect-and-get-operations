@@ -411,6 +411,7 @@
         Salaire: { color: "#27ae60", icon: "💰" },
         Impôts: { color: "#e67e22", icon: "📋" },
         Shopping: { color: "#8e44ad", icon: "🛒" },
+        Jeux: { color: "#8e44ad", icon: "🎮" },
         Autres: { color: "#95a5a6", icon: "📦" },
       };
 
@@ -475,16 +476,22 @@
         document.getElementById("net-balance").textContent = `${
           summary.netAmount >= 0 ? "+" : ""
         }${summary.netAmount.toFixed(2)}€`;
-        
+
         // Update account balance if available
-        const accountBalanceElement = document.getElementById("account-balance");
-        if (summary.accountBalance !== null && summary.accountBalance !== undefined) {
-          accountBalanceElement.textContent = `${summary.accountBalance.toFixed(2)}€`;
+        const accountBalanceElement =
+          document.getElementById("account-balance");
+        if (
+          summary.accountBalance !== null &&
+          summary.accountBalance !== undefined
+        ) {
+          accountBalanceElement.textContent = `${summary.accountBalance.toFixed(
+            2
+          )}€`;
           accountBalanceElement.parentElement.style.display = "block";
         } else {
           accountBalanceElement.parentElement.style.display = "none";
         }
-        
+
         document.getElementById("total-operations").textContent =
           summary.totalOperations;
       }
@@ -693,18 +700,33 @@
 
           // Create operations list HTML
           const operationsHtml = categoryData.operations
-            .sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')))
-            .map(operation => `
+            .sort(
+              (a, b) =>
+                new Date(b.date.split("/").reverse().join("-")) -
+                new Date(a.date.split("/").reverse().join("-"))
+            )
+            .map(
+              (operation) => `
               <div class="operation-item">
                 <div class="operation-date">${operation.date}</div>
                 <div class="operation-description" title="${operation.libelle}">
-                  ${operation.libelle.length > 50 ? operation.libelle.substring(0, 50) + '...' : operation.libelle}
+                  ${
+                    operation.libelle.length > 50
+                      ? operation.libelle.substring(0, 50) + "..."
+                      : operation.libelle
+                  }
                 </div>
-                <div class="operation-amount ${operation.amount >= 0 ? 'positive' : 'negative'}">
-                  ${operation.amount >= 0 ? '+' : ''}${operation.amount.toFixed(2)}€
+                <div class="operation-amount ${
+                  operation.amount >= 0 ? "positive" : "negative"
+                }">
+                  ${operation.amount >= 0 ? "+" : ""}${operation.amount.toFixed(
+                2
+              )}€
                 </div>
               </div>
-            `).join('');
+            `
+            )
+            .join("");
 
           categoryItem.innerHTML = `
             <div class="category-header" onclick="toggleCategory(this)">
@@ -751,7 +773,7 @@
       // Toggle category expansion
       function toggleCategory(headerElement) {
         const categoryItem = headerElement.parentElement;
-        categoryItem.classList.toggle('category-expanded');
+        categoryItem.classList.toggle("category-expanded");
       }
     </script>
   </body>
