@@ -4,16 +4,44 @@ An automated Node.js tool that connects to your Credit Agricole bank account and
 
 ## Features
 
+### 🤖 **Automated Bank Operations**
+
 - **Automated Login**: Securely logs into your Credit Agricole account using your account number and password
 - **Smart Keypad Navigation**: Handles the randomized digital keypad for password entry
 - **CSV Download**: Downloads transaction data in CSV format for the current month
 - **Date Range Selection**: Automatically selects from the first to the last day of the current month
-- **Comprehensive Logging**: Detailed logging with timestamps for monitoring the automation process
 - **Privacy Compliance**: Automatically handles privacy policy acceptance
-- **Operation Categorization**: Automatically categorizes downloaded operations by type (food, transport, health, etc.)
-- **Financial Reports**: Generates detailed reports with spending analysis and category breakdowns
-- **Interactive Dashboard**: Web-based visualization with charts, graphs, and financial insights
-- **Real-time Analytics**: Visual breakdown of spending patterns and category distributions
+
+### 📊 **Advanced Data Processing**
+
+- **Account Balance Extraction**: Automatically extracts current account balance from CSV files
+- **Robust CSV Parsing**: Handles multi-line CSV format with proper encoding support for French characters
+- **Character Encoding Fix**: Automatically corrects broken characters (€, à, é, etc.) in CSV files
+- **Operation Categorization**: Intelligently categorizes transactions into 9+ categories:
+  - 🏠 Logement (Housing)
+  - 🍕 Alimentation (Food)
+  - 🚗 Transport
+  - 🏥 Santé (Health)
+  - 🎮 Jeux (Games/Entertainment)
+  - 🎯 Loisirs (Leisure)
+  - 🏦 Banque (Banking)
+  - 💰 Salaire (Salary)
+  - 🛒 Shopping
+  - 📋 Impôts (Taxes)
+
+### 📈 **Visualization & Analytics**
+
+- **Interactive Dashboard**: Modern web-based interface with responsive design
+- **Real-time Charts**: Doughnut charts, bar charts, and timeline visualizations
+- **Expandable Categories**: Click to drill down into individual transactions
+- **Financial Summary Cards**: Quick overview of debits, credits, net balance, and account balance
+- **Export Capabilities**: JSON and text report generation
+
+### 🐳 **Deployment & Infrastructure**
+
+- **Docker Support**: Fully containerized with optimized Dockerfile and docker-compose
+- **Comprehensive Logging**: Detailed logging with timestamps using Pino logger
+- **Error Handling**: Robust error handling and recovery mechanisms
 
 ## Prerequisites
 
@@ -25,11 +53,13 @@ An automated Node.js tool that connects to your Credit Agricole bank account and
 
 1. Clone or download this repository
 2. Install dependencies:
+
    ```bash
    npm install
    ```
 
 3. Set up your environment variables:
+
    ```bash
    cp .env.example .env
    ```
@@ -42,53 +72,65 @@ An automated Node.js tool that connects to your Credit Agricole bank account and
 
 ## Usage
 
-Run the automation script:
+### 🚀 **Quick Start - Complete Workflow**
+
+1. **Download Bank Operations**:
+
+   ```bash
+   npm start
+   # or: node index.js
+   ```
+
+2. **Process & Categorize Data**:
+
+   ```bash
+   npm run categorize CA20250822_XXXXXX.csv
+   # or: node categorize-operations.js your-csv-file.csv
+   ```
+
+3. **Visualize with Dashboard**:
+   ```bash
+   node server.js
+   # Open http://localhost:3000 in your browser
+   ```
+
+### 🐳 **Docker Deployment (Recommended)**
+
+For a containerized deployment of the dashboard:
 
 ```bash
-npm start
+# Build and run the dashboard container
+docker compose up --build
+
+# Access dashboard at http://localhost:3000
 ```
 
-Or directly with Node.js:
+The Docker setup automatically:
 
-```bash
-node index.js
-```
+- Installs all dependencies
+- Configures the server environment
+- Serves the dashboard on port 3000
+- Handles file permissions and security
 
-### Categorizing Downloaded Operations
+### 📊 **Data Processing Features**
 
-After downloading your CSV file, you can analyze and categorize your operations:
+The categorization script automatically:
 
-```bash
-npm run categorize path/to/your/operations.csv
-```
+- **Extracts Account Balance**: Reads current balance from CSV line A7
+- **Fixes Encoding Issues**: Corrects broken French characters (€, à, é, ç, etc.)
+- **Smart Categorization**: Uses keyword matching for 9+ categories
+- **Generates Reports**: Creates both JSON and human-readable text reports
+- **Handles Multi-line CSV**: Properly parses Credit Agricole's complex CSV format
 
-Or directly:
+### 🎯 **Dashboard Features**
 
-```bash
-node categorize-operations.js path/to/your/operations.csv
-```
+The interactive dashboard provides:
 
-This will:
-- Parse the CSV file (expects headers at row 11: Date, Libellé, Débit euros, Crédit euros)
-- Categorize operations based on keywords in the Libellé field
-- Generate a detailed financial report
-- Save results as JSON and text files
-
-### Visualizing Your Data with Interactive Dashboard
-
-Launch the web dashboard to see your financial data with beautiful charts and graphs:
-
-```bash
-node server.js
-```
-
-Then open your browser and go to `http://localhost:3000`. Upload the JSON file generated by the categorization tool to see:
-
-- **📊 Interactive Charts**: Doughnut chart showing spending by category
-- **💸 Balance Overview**: Visual comparison of debits vs credits
-- **📈 Timeline Analysis**: Cumulative balance evolution over time
-- **📋 Category Details**: Detailed breakdown with icons and statistics
-- **💰 Summary Cards**: Key financial metrics at a glance
+- **📊 Visual Analytics**: Doughnut charts, bar charts, and timeline graphs
+- **💰 Financial Summary**: Account balance, debits, credits, and net balance
+- **🔍 Category Drill-down**: Click categories to see individual transactions
+- **📱 Responsive Design**: Works on desktop, tablet, and mobile
+- **🎨 Modern UI**: Clean interface with smooth animations and icons
 
 ### What the Script Does
 
@@ -108,14 +150,15 @@ Then open your browser and go to `http://localhost:3000`. Upload the JSON file g
 
 ### Environment Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
+| Variable         | Description                         | Example    |
+| ---------------- | ----------------------------------- | ---------- |
 | `ACCOUNT_NUMBER` | Your Credit Agricole account number | `12345678` |
-| `PASSWORD` | Your account password (digits only) | `123456` |
+| `PASSWORD`       | Your account password (digits only) | `123456`   |
 
 ### Browser Settings
 
 The script runs with the following Puppeteer configuration:
+
 - **Headless**: `false` (browser window is visible)
 - **Slow Motion**: 100ms delay between actions
 - **Viewport**: 1920px width, full page height
@@ -127,36 +170,56 @@ The script runs with the following Puppeteer configuration:
 - **pino**: High-performance logging
 - **pino-pretty**: Pretty-printed log formatting
 
-## File Structure
+## 📁 Project Structure
 
 ```
-├── index.js                    # Main automation script
+├── index.js                    # Main automation script (Puppeteer)
 ├── categorize-operations.js    # CSV analysis and categorization tool
 ├── dashboard.html             # Interactive web dashboard
 ├── server.js                  # Web server for dashboard
 ├── package.json               # Project dependencies and scripts
+├── Dockerfile                 # Docker container configuration
+├── compose.yaml               # Docker Compose setup
+├── .dockerignore              # Docker build exclusions
+├── README.Docker.md           # Docker-specific documentation
 ├── .env                      # Environment variables (create from .env.example)
 ├── .env.example              # Environment variables template
 ├── .gitignore                # Git ignore rules
-└── README.md                 # This documentation
+└── README.md                 # This comprehensive documentation
 ```
 
-## Operation Categories
+### 🗂️ Generated Files (after running scripts):
 
-The categorization script automatically sorts operations into the following categories:
+```
+├── CA20250822_XXXXXX.csv      # Downloaded bank operations
+├── CA20250822_XXXXXX_categorized.json  # Processed financial data
+├── CA20250822_XXXXXX_report.txt        # Human-readable report
+└── downloads/                 # Browser download directory
+```
 
-- **Alimentation**: Supermarkets, bakeries, food stores
-- **Transport**: Gas stations, public transport, taxis, tolls
-- **Santé**: Pharmacies, doctors, hospitals, insurance
-- **Logement**: Rent, utilities, internet, home insurance
-- **Loisirs**: Restaurants, entertainment, streaming services
-- **Banque**: Bank fees, transfers, withdrawals
-- **Salaire**: Salary, bonuses, compensation
-- **Impôts**: Taxes, government fees
-- **Shopping**: Online stores, retail purchases
-- **Autres**: Uncategorized operations
+## 🏷️ Smart Categorization System
 
-Categories can be customized by editing the `CATEGORIES` object in `categorize-operations.js`.
+The categorization script automatically sorts operations into **10 intelligent categories** with enhanced keyword matching:
+
+- **🍕 Alimentation**: Supermarkets, restaurants, food delivery (Carrefour, McDonald's, etc.)
+- **🚗 Transport**: Gas stations, public transport, taxis, tolls (Uber, SNCF, Péage, etc.)
+- **🏥 Santé**: Pharmacies, doctors, hospitals, insurance (Harmonie Mutuelle, etc.)
+- **🏠 Logement**: Rent, utilities, internet, home insurance (Orange, EDF, Loyer, etc.)
+- **🎯 Loisirs**: Entertainment, streaming, culture (Netflix, Spotify, Cinema, etc.)
+- **🎮 Jeux**: Gaming platforms, digital entertainment (Steam, PayPal gaming, Discord, etc.)
+- **🏦 Banque**: Bank fees, transfers, withdrawals, account maintenance (Cotisation, Virement, etc.)
+- **💰 Salaire**: Salary, bonuses, compensation, work-related income
+- **📋 Impôts**: Taxes, government fees, official payments (DGFIP, URSSAF, etc.)
+- **🛒 Shopping**: Online stores, retail purchases (Amazon, Zalando, Fnac, etc.)
+- **📦 Autres**: Uncategorized or miscellaneous operations
+
+### ✨ Advanced Features:
+
+- **🔧 Customizable**: Edit the `CATEGORIES` object in `categorize-operations.js` to add your own keywords
+- **🌍 French Support**: Handles French banking terminology and special characters automatically
+- **🔍 Smart Matching**: Uses keyword-based detection with fallback to "Autres" category
+- **💰 Balance Extraction**: Automatically extracts current account balance from CSV files
+- **🔤 Encoding Fix**: Corrects broken characters (€, à, é, ç, etc.) in CSV data
 
 ## Complete Workflow
 
@@ -173,22 +236,26 @@ Here's the complete process from download to visualization:
 The web dashboard provides comprehensive financial visualization:
 
 ### 📊 Charts & Graphs
+
 - **Category Distribution**: Doughnut chart showing spending breakdown
-- **Balance Comparison**: Bar chart comparing debits vs credits  
+- **Balance Comparison**: Bar chart comparing debits vs credits
 - **Timeline Evolution**: Line chart tracking cumulative balance over time
 
 ### 💳 Summary Cards
+
 - Total debits and credits
 - Net balance calculation
 - Total number of operations
 
 ### 📋 Category Analysis
+
 - Detailed breakdown by spending category
 - Average amounts per category
 - Transaction counts with visual icons
 - Color-coded spending indicators
 
 ### 🎨 Modern UI
+
 - Responsive design for desktop and mobile
 - Beautiful gradient backgrounds
 - Smooth animations and hover effects
@@ -208,25 +275,30 @@ The web dashboard provides comprehensive financial visualization:
 ### Common Issues
 
 **Browser doesn't open:**
+
 - Ensure you have sufficient permissions to run Chrome
 - Check if Puppeteer installed correctly: `npm list puppeteer`
 
 **Login fails:**
+
 - Verify your account number and password in `.env`
 - Check if Credit Agricole has changed their website structure
 - Ensure your account is not locked or requires additional verification
 
 **Download doesn't start:**
+
 - The script waits for page elements to load; slow connections may need longer delays
 - Check if you have sufficient account permissions for downloading operations
 
 **Date selection fails:**
+
 - The script selects the current month by default
 - Ensure the calendar widget is accessible and not blocked by other elements
 
 ### Debugging
 
 The script includes comprehensive logging. Check the console output for detailed information about each step. Log levels include:
+
 - `info`: General operation progress
 - `error`: Critical failures (if any)
 
@@ -240,6 +312,7 @@ The script includes comprehensive logging. Check the console output for detailed
 ## Legal Notice
 
 This tool is for personal use only. Ensure you comply with:
+
 - Credit Agricole's terms of service
 - Local banking regulations
 - Data protection laws
