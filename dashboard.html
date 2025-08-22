@@ -179,15 +179,90 @@
       }
 
       .category-item {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 15px 0;
         border-bottom: 1px solid #ecf0f1;
       }
 
       .category-item:last-child {
         border-bottom: none;
+      }
+
+      .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 15px 0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+      }
+
+      .category-header:hover {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        margin: 0 -10px;
+        padding: 15px 10px;
+      }
+
+      .category-expand-icon {
+        font-size: 1.2rem;
+        transition: transform 0.3s ease;
+        color: #7f8c8d;
+      }
+
+      .category-expanded .category-expand-icon {
+        transform: rotate(90deg);
+      }
+
+      .operations-list {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease;
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        margin: 0 -10px 10px -10px;
+      }
+
+      .category-expanded .operations-list {
+        max-height: 500px;
+        padding: 15px;
+      }
+
+      .operation-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid #e9ecef;
+        font-size: 0.9rem;
+      }
+
+      .operation-item:last-child {
+        border-bottom: none;
+      }
+
+      .operation-date {
+        font-weight: bold;
+        color: #495057;
+        min-width: 80px;
+      }
+
+      .operation-description {
+        flex: 1;
+        margin: 0 15px;
+        color: #6c757d;
+      }
+
+      .operation-amount {
+        font-weight: bold;
+        min-width: 80px;
+        text-align: right;
+      }
+
+      .operation-amount.positive {
+        color: #27ae60;
+      }
+
+      .operation-amount.negative {
+        color: #e74c3c;
       }
 
       .category-info {
@@ -598,38 +673,67 @@
           const categoryItem = document.createElement("div");
           categoryItem.className = "category-item";
 
+          // Create operations list HTML
+          const operationsHtml = categoryData.operations
+            .sort((a, b) => new Date(b.date.split('/').reverse().join('-')) - new Date(a.date.split('/').reverse().join('-')))
+            .map(operation => `
+              <div class="operation-item">
+                <div class="operation-date">${operation.date}</div>
+                <div class="operation-description" title="${operation.libelle}">
+                  ${operation.libelle.length > 50 ? operation.libelle.substring(0, 50) + '...' : operation.libelle}
+                </div>
+                <div class="operation-amount ${operation.amount >= 0 ? 'positive' : 'negative'}">
+                  ${operation.amount >= 0 ? '+' : ''}${operation.amount.toFixed(2)}€
+                </div>
+              </div>
+            `).join('');
+
           categoryItem.innerHTML = `
-                    <div class="category-info">
-                        <div class="category-icon" style="background-color: ${
-                          config.color
-                        }20; color: ${config.color}">
-                            ${config.icon}
-                        </div>
-                        <div>
-                            <div style="font-weight: bold; color: #2c3e50;">${categoryName}</div>
-                            <div style="font-size: 0.9rem; color: #7f8c8d;">${
-                              categoryData.count
-                            } opération(s)</div>
-                        </div>
-                    </div>
-                    <div class="category-stats">
-                        <div class="category-amount" style="color: ${
-                          categoryData.totalAmount < 0 ? "#e74c3c" : "#27ae60"
-                        }">
-                            ${
-                              categoryData.totalAmount >= 0 ? "+" : ""
-                            }${categoryData.totalAmount.toFixed(2)}€
-                        </div>
-                        <div class="category-count">
-                            Moy: ${(
-                              categoryData.totalAmount / categoryData.count
-                            ).toFixed(2)}€
-                        </div>
-                    </div>
-                `;
+            <div class="category-header" onclick="toggleCategory(this)">
+              <div class="category-info">
+                <div class="category-icon" style="background-color: ${
+                  config.color
+                }20; color: ${config.color}">
+                  ${config.icon}
+                </div>
+                <div>
+                  <div style="font-weight: bold; color: #2c3e50;">${categoryName}</div>
+                  <div style="font-size: 0.9rem; color: #7f8c8d;">${
+                    categoryData.count
+                  } opération(s)</div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; gap: 15px;">
+                <div class="category-stats">
+                  <div class="category-amount" style="color: ${
+                    categoryData.totalAmount < 0 ? "#e74c3c" : "#27ae60"
+                  }">
+                    ${
+                      categoryData.totalAmount >= 0 ? "+" : ""
+                    }${categoryData.totalAmount.toFixed(2)}€
+                  </div>
+                  <div class="category-count">
+                    Moy: ${(
+                      categoryData.totalAmount / categoryData.count
+                    ).toFixed(2)}€
+                  </div>
+                </div>
+                <div class="category-expand-icon">▶</div>
+              </div>
+            </div>
+            <div class="operations-list">
+              ${operationsHtml}
+            </div>
+          `;
 
           categoryList.appendChild(categoryItem);
         });
+      }
+
+      // Toggle category expansion
+      function toggleCategory(headerElement) {
+        const categoryItem = headerElement.parentElement;
+        categoryItem.classList.toggle('category-expanded');
       }
     </script>
   </body>

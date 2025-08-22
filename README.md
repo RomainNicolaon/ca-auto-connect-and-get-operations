@@ -158,6 +158,42 @@ The categorization script automatically sorts operations into the following cate
 
 Categories can be customized by editing the `CATEGORIES` object in `categorize-operations.js`.
 
+## Complete Workflow
+
+Here's the complete process from download to visualization:
+
+1. **Download Operations**: `npm start` - Downloads CSV from your bank account
+2. **Categorize Data**: `npm run categorize filename.csv` - Analyzes and categorizes transactions
+3. **Visualize Results**: `node server.js` - Launch dashboard at http://localhost:3000
+4. **Upload JSON**: Use the dashboard to upload your `*_categorized.json` file
+5. **Explore Data**: View interactive charts, timelines, and detailed breakdowns
+
+## Dashboard Features
+
+The web dashboard provides comprehensive financial visualization:
+
+### 📊 Charts & Graphs
+- **Category Distribution**: Doughnut chart showing spending breakdown
+- **Balance Comparison**: Bar chart comparing debits vs credits  
+- **Timeline Evolution**: Line chart tracking cumulative balance over time
+
+### 💳 Summary Cards
+- Total debits and credits
+- Net balance calculation
+- Total number of operations
+
+### 📋 Category Analysis
+- Detailed breakdown by spending category
+- Average amounts per category
+- Transaction counts with visual icons
+- Color-coded spending indicators
+
+### 🎨 Modern UI
+- Responsive design for desktop and mobile
+- Beautiful gradient backgrounds
+- Smooth animations and hover effects
+- Intuitive file upload interface
+
 ## Security Considerations
 
 ⚠️ **Important Security Notes:**
