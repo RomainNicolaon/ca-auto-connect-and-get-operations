@@ -10,6 +10,8 @@ An automated Node.js tool that connects to your Credit Agricole bank account and
 - **Date Range Selection**: Automatically selects from the first to the last day of the current month
 - **Comprehensive Logging**: Detailed logging with timestamps for monitoring the automation process
 - **Privacy Compliance**: Automatically handles privacy policy acceptance
+- **Operation Categorization**: Automatically categorizes downloaded operations by type (food, transport, health, etc.)
+- **Financial Reports**: Generates detailed reports with spending analysis and category breakdowns
 
 ## Prerequisites
 
@@ -49,6 +51,26 @@ Or directly with Node.js:
 ```bash
 node index.js
 ```
+
+### Categorizing Downloaded Operations
+
+After downloading your CSV file, you can analyze and categorize your operations:
+
+```bash
+npm run categorize path/to/your/operations.csv
+```
+
+Or directly:
+
+```bash
+node categorize-operations.js path/to/your/operations.csv
+```
+
+This will:
+- Parse the CSV file (expects headers at row 11: Date, Libellé, Débit euros, Crédit euros)
+- Categorize operations based on keywords in the Libellé field
+- Generate a detailed financial report
+- Save results as JSON and text files
 
 ### What the Script Does
 
@@ -90,13 +112,31 @@ The script runs with the following Puppeteer configuration:
 ## File Structure
 
 ```
-├── index.js           # Main automation script
-├── package.json       # Project dependencies and scripts
-├── .env              # Environment variables (create from .env.example)
-├── .env.example      # Environment variables template
-├── .gitignore        # Git ignore rules
-└── README.md         # This documentation
+├── index.js                    # Main automation script
+├── categorize-operations.js    # CSV analysis and categorization tool
+├── package.json               # Project dependencies and scripts
+├── .env                      # Environment variables (create from .env.example)
+├── .env.example              # Environment variables template
+├── .gitignore                # Git ignore rules
+└── README.md                 # This documentation
 ```
+
+## Operation Categories
+
+The categorization script automatically sorts operations into the following categories:
+
+- **Alimentation**: Supermarkets, bakeries, food stores
+- **Transport**: Gas stations, public transport, taxis, tolls
+- **Santé**: Pharmacies, doctors, hospitals, insurance
+- **Logement**: Rent, utilities, internet, home insurance
+- **Loisirs**: Restaurants, entertainment, streaming services
+- **Banque**: Bank fees, transfers, withdrawals
+- **Salaire**: Salary, bonuses, compensation
+- **Impôts**: Taxes, government fees
+- **Shopping**: Online stores, retail purchases
+- **Autres**: Uncategorized operations
+
+Categories can be customized by editing the `CATEGORIES` object in `categorize-operations.js`.
 
 ## Security Considerations
 
