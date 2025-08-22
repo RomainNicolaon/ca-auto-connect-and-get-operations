@@ -99,6 +99,7 @@ const CATEGORIES = {
     "CHEQUE",
     "RETRAIT",
     "DEPOT",
+    "VIR",
   ],
   Salaire: ["SALAIRE", "PAIE", "REMUNERATION", "PRIME", "INDEMNITE"],
   Impôts: ["IMPOT", "TAXE", "TRESOR PUBLIC", "DGFIP", "URSSAF"],
