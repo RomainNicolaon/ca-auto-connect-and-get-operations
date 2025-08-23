@@ -399,14 +399,11 @@ function generateReport(categorizedData) {
       avgAmount >= 0 ? "+" : ""
     }${avgAmount.toFixed(2)}€\n`;
 
-    // Show top 3 operations for this category
-    const topOps = data.operations
-      .sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
-      .slice(0, 3);
+    // Show operations for this category
 
-    report += `   • Principales opérations:\n`;
-    topOps.forEach((op) => {
-      report += `     - ${op.date}: ${op.libelle.substring(0, 40)}... (${
+    report += `   • Opérations:\n`;
+    data.operations.forEach((op) => {
+      report += `     - ${op.date}: ${op.libelle} (${
         op.amount >= 0 ? "+" : ""
       }${op.amount.toFixed(2)}€)\n`;
     });

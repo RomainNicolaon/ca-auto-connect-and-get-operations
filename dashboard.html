@@ -710,11 +710,7 @@
               <div class="operation-item">
                 <div class="operation-date">${operation.date}</div>
                 <div class="operation-description" title="${operation.libelle}">
-                  ${
-                    operation.libelle.length > 50
-                      ? operation.libelle.substring(0, 50) + "..."
-                      : operation.libelle
-                  }
+                  ${operation.libelle}
                 </div>
                 <div class="operation-amount ${
                   operation.amount >= 0 ? "positive" : "negative"
