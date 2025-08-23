@@ -16,108 +16,8 @@ const logger = pino(
   })
 );
 
-// Categories configuration - customize these based on your needs
-const CATEGORIES = {
-  Alimentation: [
-    "CARREFOUR",
-    "LECLERC",
-    "AUCHAN",
-    "INTERMARCHE",
-    "SUPER U",
-    "CASINO",
-    "MONOPRIX",
-    "FRANPRIX",
-    "PICARD",
-    "LIDL",
-    "ALDI",
-    "BIOCOOP",
-    "BOULANGERIE",
-    "BOUCHERIE",
-    "EPICERIE",
-    "MARCHE",
-  ],
-  Transport: [
-    "SNCF",
-    "RATP",
-    "UBER",
-    "TAXI",
-    "ESSENCE",
-    "STATION SERVICE",
-    "AUTOROUTE",
-    "PARKING",
-    "PEAGE",
-    "TOTAL",
-    "BP",
-    "SHELL",
-    "ESSO",
-  ],
-  Santé: [
-    "PHARMACIE",
-    "MEDECIN",
-    "DENTISTE",
-    "HOPITAL",
-    "CLINIQUE",
-    "LABORATOIRE",
-    "MUTUELLE",
-    "SECU",
-    "CPAM",
-  ],
-  Logement: [
-    "LOYER",
-    "EDF",
-    "GDF",
-    "ENGIE",
-    "VEOLIA",
-    "SUEZ",
-    "FREE",
-    "ORANGE",
-    "SFR",
-    "BOUYGUES",
-    "ASSURANCE HABITATION",
-    "SYNDIC",
-    "CHARGES",
-  ],
-  Loisirs: [
-    "CINEMA",
-    "RESTAURANT",
-    "CAFE",
-    "BAR",
-    "NETFLIX",
-    "SPOTIFY",
-    "AMAZON PRIME",
-    "FNAC",
-    "CULTURA",
-    "SPORT",
-    "SALLE DE SPORT",
-  ],
-  Banque: [
-    "FRAIS",
-    "COMMISSION",
-    "COTISATION",
-    "AGIOS",
-    "VIREMENT",
-    "CHEQUE",
-    "RETRAIT",
-    "DEPOT",
-    "VIREMENT EMIS",
-    "VIREMENT RECU",
-    "VIR",
-  ],
-  Salaire: ["SALAIRE", "PAIE", "REMUNERATION", "PRIME", "INDEMNITE"],
-  Impôts: ["IMPOT", "TAXE", "TRESOR PUBLIC", "DGFIP", "URSSAF"],
-  Shopping: [
-    "AMAZON",
-    "CDISCOUNT",
-    "ZALANDO",
-    "VENTE-PRIVEE",
-    "EBAY",
-    "DECATHLON",
-    "IKEA",
-    "LEROY MERLIN",
-    "CASTORAMA",
-  ],
-  Jeux: ["STEAM", "GOG", "EPIC", "DISCORD", "DISCORD GAMES", "PAYPAL"],
-};
+// Import categories configuration from categories.js
+import { CATEGORIES } from "./categories.js";
 
 /**
  * Parse CSV content and extract operations
@@ -231,8 +131,8 @@ function parseCSV(csvContent) {
   }
 
   return {
-    operations: operations,
-    accountBalance: accountBalance,
+    operations,
+    accountBalance,
   };
 }
 
@@ -262,25 +162,33 @@ function parseTransaction(date, lines) {
     const debit = debitStr ? parseFloat(debitStr.replace(",", ".")) : 0;
     const credit = creditStr ? parseFloat(creditStr.replace(",", ".")) : 0;
 
-    // Extract meaningful description (remove the date and amounts)
-    let libelle = fullText
-      .replace(date, "")
-      .replace(/\d+,\d+/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    // Extract meaningful description by processing each line individually
+    // Remove the first line (which contains the date) and the last line (which contains amounts)
+    const descriptionLines = lines.slice(1, -1);
 
-    // Clean up common patterns
-    libelle = libelle
-      .replace(/^[;\s]+/, "")
-      .replace(/[;\s]+$/, "")
-      .replace(/\s+/g, " ")
-      .trim();
+    // Process the description lines to extract clean text
+    let libelle = descriptionLines
+      .map((line) => line.replace(/;/g, " ").trim()) // Replace semicolons with spaces and trim each line
+      .join(" ") // Join with single spaces
+      .replace(/\s+/g, " ") // Replace multiple spaces with single space
+      .replace(/\d+,\d+/g, "") // Remove any remaining amounts
+      .replace(/�/g, "à") // Replace special characters
+      .trim(); // Final trim
+
+    // If no description lines, extract from full text as fallback
+    if (!libelle) {
+      libelle = fullText
+        .replace(date, "") // Remove the date
+        .replace(/\d+,\d+/g, "") // Remove amounts
+        .replace(/[;\s]+/g, " ") // Replace semicolons and multiple spaces with a single space
+        .trim();
+    }
 
     const operation = {
-      date: date,
-      libelle: libelle,
-      debit: debit,
-      credit: credit,
+      date,
+      libelle: libelle.replace(/"/g, ""), // Remove all quotes from the description
+      debit,
+      credit,
       amount: credit - debit,
       type: credit - debit >= 0 ? "CREDIT" : "DEBIT",
     };
