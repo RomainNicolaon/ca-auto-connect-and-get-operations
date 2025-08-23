@@ -17,17 +17,18 @@ An automated Node.js tool that connects to your Credit Agricole bank account and
 - **Account Balance Extraction**: Automatically extracts current account balance from CSV files
 - **Robust CSV Parsing**: Handles multi-line CSV format with proper encoding support for French characters
 - **Character Encoding Fix**: Automatically corrects broken characters (€, à, é, etc.) in CSV files
-- **Operation Categorization**: Intelligently categorizes transactions into 9+ categories:
-  - 🏠 Logement (Housing)
-  - 🍕 Alimentation (Food)
-  - 🚗 Transport
-  - 🏥 Santé (Health)
-  - 🎮 Jeux (Games/Entertainment)
-  - 🎯 Loisirs (Leisure)
-  - 🏦 Banque (Banking)
-  - 💰 Salaire (Salary)
-  - 🛒 Shopping
-  - 📋 Impôts (Taxes)
+- **Smart Categorization**: Intelligently categorizes transactions into 11 comprehensive categories:
+  - 💰 Revenus (Income) - Salary, benefits, transfers
+  - 🏠 Logement (Housing) - Rent, utilities, telecom, accommodation
+  - 🍕 Alimentation (Food) - Groceries, restaurants, fast food
+  - 🚗 Transport - Fuel, tolls, public transport, car maintenance
+  - 🏥 Santé (Health) - Healthcare, pharmacy, insurance, optical
+  - 🎯 Loisirs (Leisure) - Entertainment, culture, sports, streaming
+  - 🛒 Shopping - Online purchases, retail, clothing, electronics
+  - 🎮 Divertissement (Gaming) - Games, digital entertainment platforms
+  - 🏦 Banque (Banking) - Banking fees and operations
+  - 📋 Impôts (Taxes) - Government fees and taxes
+  - 📦 Divers (Miscellaneous) - Other transactions
 
 ### 📈 **Visualization & Analytics**
 
@@ -42,6 +43,8 @@ An automated Node.js tool that connects to your Credit Agricole bank account and
 - **Docker Support**: Fully containerized with optimized Dockerfile and docker-compose
 - **Comprehensive Logging**: Detailed logging with timestamps using Pino logger
 - **Error Handling**: Robust error handling and recovery mechanisms
+- **Modular Architecture**: Categories configuration separated into dedicated file for maintainability
+- **ES6 Modules**: Modern JavaScript with import/export syntax
 
 ## Prerequisites
 
@@ -173,19 +176,18 @@ The script runs with the following Puppeteer configuration:
 ## 📁 Project Structure
 
 ```
-├── index.js                    # Main automation script (Puppeteer)
-├── categorize-operations.js    # CSV analysis and categorization tool
+ca-auto-connect-and-get-operations/
+├── index.js                    # Main automation script
+├── categorize-operations.js    # CSV processing and categorization
+├── categories.js              # Transaction categories configuration
 ├── dashboard.html             # Interactive web dashboard
-├── server.js                  # Web server for dashboard
-├── package.json               # Project dependencies and scripts
-├── Dockerfile                 # Docker container configuration
-├── compose.yaml               # Docker Compose setup
-├── .dockerignore              # Docker build exclusions
-├── README.Docker.md           # Docker-specific documentation
-├── .env                      # Environment variables (create from .env.example)
+├── server.js                  # Dashboard web server
+├── package.json               # Dependencies and scripts
 ├── .env.example              # Environment variables template
-├── .gitignore                # Git ignore rules
-└── README.md                 # This comprehensive documentation
+├── Dockerfile                # Docker container configuration
+├── compose.yaml              # Docker Compose setup
+├── .dockerignore             # Docker build exclusions
+└── README.md                 # This documentation
 ```
 
 ### 🗂️ Generated Files (after running scripts):
@@ -213,13 +215,25 @@ The categorization script automatically sorts operations into **10 intelligent c
 - **🛒 Shopping**: Online stores, retail purchases (Amazon, Zalando, Fnac, etc.)
 - **📦 Autres**: Uncategorized or miscellaneous operations
 
-### ✨ Advanced Features:
+### 🔧 Customizing Categories
 
-- **🔧 Customizable**: Edit the `CATEGORIES` object in `categorize-operations.js` to add your own keywords
-- **🌍 French Support**: Handles French banking terminology and special characters automatically
-- **🔍 Smart Matching**: Uses keyword-based detection with fallback to "Autres" category
-- **💰 Balance Extraction**: Automatically extracts current account balance from CSV files
-- **🔤 Encoding Fix**: Corrects broken characters (€, à, é, ç, etc.) in CSV data
+Transaction categories are now configured in a separate `categories.js` file for better maintainability:
+
+```javascript
+// categories.js
+export const CATEGORIES = {
+  Alimentation: ["CARREFOUR", "LECLERC", "MCDONALDS"],
+  Transport: ["TOTAL", "SHELL", "SNCF"],
+  // Add your own categories and keywords
+};
+```
+
+**Key improvements:**
+- ✅ **Modular Design**: Categories separated from main logic
+- ✅ **ES6 Modules**: Modern import/export syntax
+- ✅ **Better Organization**: Cleaner code structure
+- ✅ **Easy Maintenance**: Modify categories without touching main script
+- ✅ **Enhanced Keywords**: More comprehensive keyword matching for French banking
 
 ## Complete Workflow
 
