@@ -4,3 +4,8 @@ package-lock.json
 *.csv
 *.json
 *.txt
+
+debug/
+*.backup.*
+browser-profile/
+downloads/

@@ -34,11 +34,11 @@ function parseCSV(csvContent) {
     const balanceLine = lines[6]; // Line 7 (0-indexed)
     // Handle encoding issues with special characters
     const balanceMatch = balanceLine.match(
-      /Solde au \d{2}\/\d{2}\/\d{4}\s+([\d\s�]+),(\d{2})\s*[€�]/
+      /Solde au \d{2}\/\d{2}\/\d{4}\s+(-?\s*[\d\s\u00a0\u202f.]+),(\d{2})/
     );
     if (balanceMatch) {
       const balanceStr =
-        balanceMatch[1].replace(/[\s�]/g, "") + "." + balanceMatch[2];
+        balanceMatch[1].replace(/[\s\u00a0\u202f.]/g, "") + "." + balanceMatch[2];
       accountBalance = parseFloat(balanceStr);
       logger.info(`Account balance extracted: ${accountBalance}€`);
     } else {
@@ -73,61 +73,11 @@ function parseCSV(csvContent) {
     );
   }
 
-  // Parse multi-line transactions starting from headerIndex + 1
-  let i = headerIndex + 1;
-  while (i < lines.length) {
-    const line = lines[i].trim();
-
-    // Skip empty lines
-    if (!line) {
-      i++;
-      continue;
-    }
-
-    // Check if this line starts a new transaction (starts with a date)
-    const dateMatch = line.match(/^(\d{2}\/\d{2}\/\d{4});/);
-    if (dateMatch) {
-      const date = dateMatch[1];
-
-      // Collect all lines for this transaction until we find the amounts
-      let transactionLines = [line];
-      let j = i + 1;
-      let foundAmounts = false;
-
-      // Keep reading lines until we find one that ends with amounts (;number;;)
-      while (j < lines.length && !foundAmounts) {
-        const nextLine = lines[j].trim();
-        if (!nextLine) {
-          j++;
-          continue;
-        }
-
-        transactionLines.push(nextLine);
-
-        // Check if this line contains the amounts (ends with ;amount;; or ;amount;amount;)
-        if (
-          nextLine.match(/;\d+,\d+;;$/) ||
-          nextLine.match(/;;\d+,\d+;$/) ||
-          nextLine.match(/;\d+,\d+;\d+,\d+;$/)
-        ) {
-          foundAmounts = true;
-        }
-
-        j++;
-      }
-
-      if (foundAmounts) {
-        // Parse the complete transaction
-        const operation = parseTransaction(date, transactionLines);
-        if (operation) {
-          operations.push(operation);
-        }
-      }
-
-      i = j;
-    } else {
-      i++;
-    }
+  // Parse the operations with a real CSV reader: a quoted libellé can span several lines
+  const rows = parseCsvRecords(lines.slice(headerIndex + 1).join("\n"));
+  for (const row of rows) {
+    const operation = parseRow(row);
+    if (operation) operations.push(operation);
   }
 
   return {
@@ -137,67 +87,92 @@ function parseCSV(csvContent) {
 }
 
 /**
- * Parse a complete multi-line transaction
- * @param {string} date - Transaction date
- * @param {Array} lines - All lines for this transaction
- * @returns {Object|null} Parsed operation or null if invalid
+ * Split CSV text (";" separated, '"' quoted, quotes may contain newlines) into rows of fields
+ * @param {string} text
+ * @returns {string[][]}
  */
-function parseTransaction(date, lines) {
-  try {
-    // Join all lines and extract the libellé (description)
-    const fullText = lines.join(" ").replace(/;/g, " ").trim();
-
-    // Extract amounts from the last line
-    const lastLine = lines[lines.length - 1];
-    const amountMatch = lastLine.match(/;(\d+,\d+|);(\d+,\d+|);$/);
-
-    if (!amountMatch) {
-      logger.warn(`Could not parse amounts from: "${lastLine}"`);
-      return null;
+function parseCsvRecords(text) {
+  const rows = [];
+  let row = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"' && text[i + 1] === '"') {
+        field += '"';
+        i++;
+      } else if (c === '"') {
+        inQuotes = false;
+      } else {
+        field += c;
+      }
+    } else if (c === '"') {
+      inQuotes = true;
+    } else if (c === ";") {
+      row.push(field);
+      field = "";
+    } else if (c === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else if (c !== "\r") {
+      field += c;
     }
+  }
+  if (field || row.length) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
 
-    const debitStr = amountMatch[1] || "0";
-    const creditStr = amountMatch[2] || "0";
+/**
+ * "1 817,37" -> 1817.37 (handles normal, non-breaking and thin spaces as thousands separators)
+ */
+function parseAmount(str) {
+  if (!str || !str.trim()) return 0;
+  const value = parseFloat(str.replace(/[\s\u00a0\u202f.]/g, "").replace(",", "."));
+  return Number.isNaN(value) ? 0 : value;
+}
 
-    const debit = debitStr ? parseFloat(debitStr.replace(",", ".")) : 0;
-    const credit = creditStr ? parseFloat(creditStr.replace(",", ".")) : 0;
+/**
+ * Turn one CSV row [date, libellé, débit, crédit] into an operation
+ * @returns {Object|null} Parsed operation, or null if the row is not an operation
+ */
+function parseRow(row) {
+  const [date, rawLibelle = "", debitStr, creditStr] = row;
+  if (!/^\d{2}\/\d{2}\/\d{4}$/.test((date || "").trim())) return null;
 
-    // Extract meaningful description by processing each line individually
-    // Remove the first line (which contains the date) and the last line (which contains amounts)
-    const descriptionLines = lines.slice(1, -1);
+  const libelleLines = rawLibelle
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
+  // First line is the operation type ("PAIEMENT PAR CARTE", "Virement en votre faveur"...),
+  // the rest is the actual description (same behaviour as before)
+  const operationType = libelleLines.length > 1 ? libelleLines[0] : "";
+  const libelle = (libelleLines.length > 1 ? libelleLines.slice(1) : libelleLines)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
 
-    // Process the description lines to extract clean text
-    let libelle = descriptionLines
-      .map((line) => line.replace(/;/g, " ").trim()) // Replace semicolons with spaces and trim each line
-      .join(" ") // Join with single spaces
-      .replace(/\s+/g, " ") // Replace multiple spaces with single space
-      .replace(/\d+,\d+/g, "") // Remove any remaining amounts
-      .replace(/�/g, "à") // Replace special characters
-      .trim(); // Final trim
-
-    // If no description lines, extract from full text as fallback
-    if (!libelle) {
-      libelle = fullText
-        .replace(date, "") // Remove the date
-        .replace(/\d+,\d+/g, "") // Remove amounts
-        .replace(/[;\s]+/g, " ") // Replace semicolons and multiple spaces with a single space
-        .trim();
-    }
-
-    const operation = {
-      date,
-      libelle: libelle.replace(/"/g, ""), // Remove all quotes from the description
-      debit,
-      credit,
-      amount: credit - debit,
-      type: credit - debit >= 0 ? "CREDIT" : "DEBIT",
-    };
-
-    return operation;
-  } catch (error) {
-    logger.warn(`Error parsing transaction: ${error.message}`);
+  const debit = parseAmount(debitStr);
+  const credit = parseAmount(creditStr);
+  if (!debit && !credit) {
+    logger.warn(`Opération sans montant ignorée : ${date.trim()} ${libelle}`);
     return null;
   }
+
+  return {
+    date: date.trim(),
+    libelle,
+    operationType,
+    debit,
+    credit,
+    amount: Math.round((credit - debit) * 100) / 100,
+    type: credit - debit >= 0 ? "CREDIT" : "DEBIT",
+  };
 }
 
 /**
@@ -337,6 +312,22 @@ function saveToJSON(categorizedData, outputPath) {
 }
 
 /**
+ * Decode a Windows-1252 buffer (Crédit Agricole CSV export).
+ * Node's decoder treats it as Latin-1, so map the 0x80-0x9F range (€, ’, œ...) by hand.
+ */
+function decodeWindows1252(buffer) {
+  const extra = {
+    0x80: "€", 0x82: "‚", 0x83: "ƒ", 0x84: "„", 0x85: "…", 0x86: "†", 0x87: "‡",
+    0x88: "ˆ", 0x89: "‰", 0x8a: "Š", 0x8b: "‹", 0x8c: "Œ", 0x8e: "Ž", 0x91: "‘",
+    0x92: "’", 0x93: "“", 0x94: "”", 0x95: "•", 0x96: "–", 0x97: "—", 0x98: "˜",
+    0x99: "™", 0x9a: "š", 0x9b: "›", 0x9c: "œ", 0x9e: "ž", 0x9f: "Ÿ",
+  };
+  let out = "";
+  for (const byte of buffer) out += extra[byte] ?? String.fromCharCode(byte);
+  return out;
+}
+
+/**
  * Main function to process CSV file
  * @param {string} csvFilePath - Path to the CSV file
  */
@@ -350,7 +341,8 @@ async function processCsvFile(csvFilePath) {
     }
 
     // Read CSV file
-    const csvContent = fs.readFileSync(csvFilePath, "utf8");
+    // Crédit Agricole exports are Windows-1252 encoded (é, è, €...)
+    const csvContent = decodeWindows1252(fs.readFileSync(csvFilePath));
     logger.info("Fichier CSV lu avec succès");
 
     // Parse operations

@@ -335,6 +335,78 @@
           font-size: 2rem;
         }
       }
+
+      /* ---- Mise à jour automatique ---- */
+      .sync-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+      }
+      .file-input-button:disabled {
+        opacity: 0.6;
+        cursor: wait;
+        transform: none;
+      }
+      .data-info {
+        color: #555;
+        font-size: 0.95rem;
+      }
+      .sync-panel {
+        max-width: 640px;
+        margin: 25px auto 0;
+        text-align: left;
+      }
+      .sync-steps {
+        list-style: none;
+        display: grid;
+        gap: 10px;
+      }
+      .sync-steps li {
+        padding: 12px 16px;
+        border-radius: 10px;
+        background: #f5f6fa;
+        color: #888;
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+      }
+      .sync-steps li::before { content: "○"; width: 1.2em; }
+      .sync-steps li.running { color: #2c3e50; background: #eef0ff; }
+      .sync-steps li.running::before { content: "⏳"; }
+      .sync-steps li.waiting { color: #8a5a00; background: #fff4dc; font-weight: 600; }
+      .sync-steps li.waiting::before { content: "📱"; }
+      .sync-steps li.done { color: #1e7e46; background: #e8f7ee; }
+      .sync-steps li.done::before { content: "✅"; }
+      .sync-steps li.skipped { color: #999; }
+      .sync-steps li.skipped::before { content: "➖"; }
+      .sync-steps li.error { color: #b02a1a; background: #fdecea; }
+      .sync-steps li.error::before { content: "❌"; }
+      .sync-steps li small { margin-left: auto; font-size: 0.8rem; opacity: 0.8; }
+      .phone-alert {
+        margin-top: 15px;
+        padding: 15px;
+        border-radius: 10px;
+        background: #fff4dc;
+        border: 1px solid #f0c36d;
+        animation: pulse 1.5s ease-in-out infinite;
+      }
+      @keyframes pulse { 50% { box-shadow: 0 0 0 6px rgba(240, 195, 109, 0.25); } }
+      .sync-log-wrap { margin-top: 15px; }
+      .sync-log-wrap summary, .manual-load summary { cursor: pointer; color: #667eea; }
+      .sync-log {
+        margin-top: 10px;
+        max-height: 260px;
+        overflow: auto;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        white-space: pre-wrap;
+      }
+      .manual-load { margin-top: 20px; font-size: 0.9rem; }
     </style>
   </head>
   <body>
@@ -345,13 +417,36 @@
       </div>
 
       <div class="upload-section">
-        <h2>📊 Chargez votre fichier JSON</h2>
-        <p>Sélectionnez le fichier JSON généré par l'outil de catégorisation</p>
-        <div class="file-input-wrapper">
-          <input type="file" id="jsonFile" class="file-input" accept=".json" />
-          <button class="file-input-button">📁 Choisir le fichier JSON</button>
+        <div class="sync-bar">
+          <button id="syncButton" class="file-input-button">🔄 Mettre à jour mes opérations</button>
+          <div id="data-info" class="data-info">Chargement des dernières données…</div>
         </div>
+
+        <div id="sync-panel" class="sync-panel" hidden>
+          <ol class="sync-steps">
+            <li data-step="login">Connexion au Crédit Agricole</li>
+            <li data-step="phone">Validation sur le téléphone</li>
+            <li data-step="download">Téléchargement du CSV</li>
+            <li data-step="categorize">Catégorisation</li>
+          </ol>
+          <div id="phone-alert" class="phone-alert" hidden>
+            📱 Ouvrez la notification dans l'application <strong>Ma Banque</strong> et validez la connexion.
+          </div>
+          <details class="sync-log-wrap">
+            <summary>Journal détaillé</summary>
+            <pre id="sync-log" class="sync-log"></pre>
+          </details>
+        </div>
+
         <div id="error-message"></div>
+
+        <details class="manual-load">
+          <summary>Charger un fichier JSON manuellement</summary>
+          <div class="file-input-wrapper">
+            <input type="file" id="jsonFile" class="file-input" accept=".json" />
+            <button class="file-input-button">📁 Choisir le fichier JSON</button>
+          </div>
+        </details>
       </div>
 
       <div id="dashboard" class="dashboard">
@@ -447,6 +542,97 @@
             reader.readAsText(file);
           }
         });
+
+      // ---- Mise à jour automatique (nécessite `npm run dashboard`) ----
+      const syncButton = document.getElementById("syncButton");
+      const dataInfo = document.getElementById("data-info");
+      const syncLog = document.getElementById("sync-log");
+      let eventSource = null;
+
+      async function loadLatestData() {
+        try {
+          const res = await fetch("/api/data");
+          const body = await res.json();
+          if (!res.ok) {
+            dataInfo.textContent = body.error;
+            return;
+          }
+          financialData = body;
+          const when = new Date(body.generatedAt).toLocaleString("fr-FR");
+          dataInfo.textContent = `Données du ${when} (${body.sourceFile})`;
+          document.getElementById("error-message").innerHTML = "";
+          displayDashboard();
+        } catch {
+          dataInfo.textContent =
+            "Serveur introuvable : lancez « npm run dashboard » ou chargez un JSON à la main.";
+          syncButton.disabled = true;
+        }
+      }
+
+      function resetSteps() {
+        document.querySelectorAll(".sync-steps li").forEach((li) => {
+          li.className = "";
+          li.querySelector("small")?.remove();
+        });
+        syncLog.textContent = "";
+        document.getElementById("phone-alert").hidden = true;
+      }
+
+      function handleSyncEvent(e) {
+        if (e.type === "start") {
+          resetSteps();
+          document.getElementById("sync-panel").hidden = false;
+          syncButton.disabled = true;
+          syncButton.textContent = "⏳ Mise à jour en cours…";
+        } else if (e.type === "log") {
+          syncLog.textContent += e.line + "\n";
+          syncLog.scrollTop = syncLog.scrollHeight;
+        } else if (e.type === "step") {
+          const li = document.querySelector(`.sync-steps li[data-step="${e.id}"]`);
+          li.className = e.status;
+          li.querySelector("small")?.remove();
+          if (e.detail && e.status !== "waiting") {
+            const small = document.createElement("small");
+            small.textContent = e.detail;
+            li.appendChild(small);
+          }
+          if (e.id === "phone") document.getElementById("phone-alert").hidden = e.status !== "waiting";
+        } else if (e.type === "error") {
+          document.getElementById("phone-alert").hidden = true;
+          showError("La mise à jour a échoué : " + e.message + " (voir le journal et le dossier debug/)");
+          syncLog.parentElement.open = true;
+        } else if (e.type === "done") {
+          loadLatestData();
+        } else if (e.type === "end") {
+          syncButton.disabled = false;
+          syncButton.textContent = "🔄 Mettre à jour mes opérations";
+          eventSource?.close();
+          eventSource = null;
+        }
+      }
+
+      function followSync() {
+        eventSource?.close();
+        eventSource = new EventSource("/api/events");
+        eventSource.onmessage = (msg) => handleSyncEvent(JSON.parse(msg.data));
+      }
+
+      syncButton.addEventListener("click", async () => {
+        document.getElementById("error-message").innerHTML = "";
+        const res = await fetch("/api/sync", { method: "POST" });
+        if (!res.ok && res.status !== 409) {
+          showError("Impossible de lancer la mise à jour.");
+          return;
+        }
+        followSync();
+      });
+
+      // At startup: show the latest data, and re-attach to a sync already running
+      loadLatestData();
+      fetch("/api/status")
+        .then((r) => r.json())
+        .then((st) => st.running && followSync())
+        .catch(() => {});
 
       function showError(message) {
         const errorDiv = document.getElementById("error-message");

@@ -1,5 +1,24 @@
 # Credit Agricole Auto Connect & Operations Download
 
+## 🚀 Utilisation rapide (tout-en-un)
+
+```bash
+npm run dashboard
+```
+
+Le dashboard s'ouvre sur http://localhost:3000 avec les dernières données. Le bouton **« Mettre à jour mes opérations »** enchaîne :
+
+1. connexion au Crédit Agricole (identifiant + code secret depuis `.env`) ;
+2. validation sur le téléphone, uniquement si l'appareil n'est plus reconnu ;
+3. téléchargement du CSV du dernier mois (jusqu'à la veille) dans `downloads/` ;
+4. catégorisation, puis affichage.
+
+Sans interface : `npm run sync` fait les étapes 1 à 4 dans le terminal.
+
+Options `.env` : `DOWNLOAD_ACCOUNT` (n° de compte, par défaut xxxxxxxx), `HEADLESS=true` pour masquer la fenêtre Chrome.
+Le dossier `browser-profile/` garde la session (évite la validation téléphone à chaque fois) : ne le partagez pas.
+
+
 An automated Node.js tool that connects to your Credit Agricole bank account and downloads your latest operations as a CSV file. This tool uses Puppeteer to automate the web browser interactions required to log in and download transaction data.
 
 ## Features
